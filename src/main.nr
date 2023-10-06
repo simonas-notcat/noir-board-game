@@ -42,16 +42,20 @@ fn apply_action(game : Game, action : Action) -> Game {
 
 fn check_move_validity(game : Game, action : Action) {
     let player = game.players[action.player_id];
+
+    // Check move location is in the bound of the board
+    assert((action.location.x >= 0) & (action.location.x < 10));
+    assert((action.location.y >= 0) & (action.location.y < 10));
+
+    // Check move location is adjacent to player
+    assert(((action.location.x - player.location.x) <= 1) | ((player.location.x - action.location.x) <= 1));
+    assert(((action.location.y - player.location.y) <= 1) | ((player.location.y - action.location.y) <= 1));
+
+    // Check move location is not an obstacle
     let tile_index = game.board[action.location.x + action.location.y * 10];
     let tile = game.tiles[tile_index];
     assert(tile.isObstacle == false);
-    assert((action.location.x >= 0) & (action.location.x < 10));
-    assert((action.location.y >= 0) & (action.location.y < 10));
-    assert(((action.location.x - player.location.x) <= 1) | ((player.location.x - action.location.x) <= 1));
-    assert(((action.location.y - player.location.y) <= 1) | ((player.location.y - action.location.y) <= 1));
 }
-
-
 
 fn validate_players_locations(game : Game) {
     for i in 0..2 {
