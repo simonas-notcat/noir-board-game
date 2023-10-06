@@ -15,55 +15,67 @@ struct Tile {
 
 struct Game {
     state : u32,
-    players : [Player; 2],
+    challenger : Player,
+    defender: Player,
     board : [u32; 100],
     tiles : [Tile; 2],
 }
 
 struct Action {
-    player_id : u32,
+    isChallenger : bool,
     isMove : bool, // true = move, false = skill
     location : Location,
 }
 
 fn main(game : pub Game, action : pub Action) -> pub Game {
     validate_players_locations(game);
+    // return new game state
     apply_action(game, action)
 }
 
 fn apply_action(game : Game, action : Action) -> Game {
     let mut new_game = game;
+
     if action.isMove {
-        check_move_validity(game, action);
-        new_game.players[action.player_id].location = action.location;
+        if (action.isChallenger) {
+            check_move_validity(game, action, new_game.challenger);
+            new_game.challenger.location = action.location;
+        } else {
+            check_move_validity(game, action, new_game.defender);
+            new_game.defender.location = action.location;
+        }
     }
     new_game
 }
 
-fn check_move_validity(game : Game, action : Action) {
-    let player = game.players[action.player_id];
+fn check_move_validity(game : Game, action : Action, player: Player) {
 
-    // Check move location is in the bound of the board
+    // Check if move location is in the bound of the board
     assert((action.location.x >= 0) & (action.location.x < 10));
     assert((action.location.y >= 0) & (action.location.y < 10));
 
-    // Check move location is adjacent to player
+    // Check if move location is adjacent to player
     assert(((action.location.x - player.location.x) <= 1) | ((player.location.x - action.location.x) <= 1));
     assert(((action.location.y - player.location.y) <= 1) | ((player.location.y - action.location.y) <= 1));
 
-    // Check move location is not an obstacle
-    let tile_index = game.board[action.location.x + action.location.y * 10];
-    let tile = game.tiles[tile_index];
-    assert(tile.isObstacle == false);
+    // Check if move location is not an obstacle
+    check_if_tile_is_not_an_obsticle(game, action.location);
+}
+
+fn check_if_tile_is_not_an_obsticle (game: Game, location: Location) {
+    let tile_id = game.board[location.x + location.y * 10];
+    for i in 0..game.tiles.len() {
+        let tile = game.tiles[i];
+        if tile.id == tile_id {
+            assert(tile.isObstacle == false);
+        }
+    }
+
 }
 
 fn validate_players_locations(game : Game) {
-    for i in 0..2 {
-        let player = game.players[i];
-        let tile_index = game.board[player.location.x + player.location.y * 10];
-        let tile = game.tiles[tile_index];
-        assert(tile.isObstacle == false);
-    }
+    check_if_tile_is_not_an_obsticle(game, game.challenger.location);
+    check_if_tile_is_not_an_obsticle(game, game.defender.location);
 }
 
 #[test]
@@ -89,27 +101,28 @@ fn test_main() {
 
     let game : Game = Game { 
         state: 0, 
-        players: [alice, bob], 
+        challenger: alice, 
+        defender: bob, 
         board: board, 
         tiles: [empty, wall] 
     };
 
     let action : Action = Action { 
-        player_id: 0, 
+        isChallenger: true, 
         isMove: true, 
         location: Location { x: 0, y: 0 } 
     };
 
     let new_game = main(game, action);
 
-    assert(new_game.players[0].location.x == 0);
-    assert(new_game.players[0].location.y == 0);
+    assert(new_game.challenger.location.x == 0);
+    assert(new_game.challenger.location.y == 0);
 
 }
 
 
 #[test(should_fail)]
-fn test_main_fail() {
+fn test_main_failing() {
     let empty : Tile = Tile { id: 0, isObstacle: false };
     let wall : Tile = Tile { id: 1, isObstacle: true };
 
@@ -117,8 +130,8 @@ fn test_main_fail() {
     let bob : Player = Player { id: 1, location: Location { x: 8, y: 8 } };
 
     let board : [u32; 100] = [
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -131,20 +144,21 @@ fn test_main_fail() {
 
     let game : Game = Game { 
         state: 0, 
-        players: [alice, bob], 
+        challenger: alice, 
+        defender: bob, 
         board: board, 
         tiles: [empty, wall] 
     };
 
     let action : Action = Action { 
-        player_id: 0, 
+        isChallenger: true, 
         isMove: true, 
-        location: Location { x: 4, y: 4 } 
+        location: Location { x: 5, y: 5 } 
     };
 
     let new_game = main(game, action);
 
-    assert(new_game.players[0].location.x == 4);
-    assert(new_game.players[0].location.y == 4);
+    assert(new_game.challenger.location.x == 5);
+    assert(new_game.challenger.location.y == 5);
 
 }
